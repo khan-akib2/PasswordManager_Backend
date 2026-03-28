@@ -23,10 +23,11 @@ app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (mobile apps, curl, etc.)
     if (!origin) return callback(null, true);
-    // Allow the main client URL and any vercel preview deployments
+    // Allow localhost, the main client URL, and any vercel preview deployments
     if (
       origin === allowedOrigin ||
-      /\.vercel\.app$/.test(origin)
+      /\.vercel\.app$/.test(origin) ||
+      /^http:\/\/localhost(:\d+)?$/.test(origin)
     ) {
       return callback(null, true);
     }
