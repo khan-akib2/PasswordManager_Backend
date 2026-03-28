@@ -1,24 +1,53 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
+const rateLimit = require("express-rate-limit");
+const helmet = require("helmet");
 require("dotenv").config();
 
 const app = express();
 
-// Middleware
+// Security headers
+app.use(helmet());
+
+// CORS — never fall back to wildcard
+const allowedOrigin = process.env.CLIENT_URL;
+if (!allowedOrigin) {
+  console.warn("WARNING: CLIENT_URL not set. CORS will block all browser requests.");
+}
 app.use(cors({
-  origin: process.env.CLIENT_URL || "*",
+  origin: allowedOrigin || false,
   methods: ["GET", "POST", "PUT", "DELETE"],
   allowedHeaders: ["Content-Type", "Authorization"],
 }));
-app.use(express.json());
+
+// Body size limit — prevent large payload attacks
+app.use(express.json({ limit: "10kb" }));
+
+// Rate limiting on auth routes — max 20 requests per 15 min per IP
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: { message: "Too many requests, please try again later" },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 // Routes
-app.use("/api/auth", require("./routes/authRoutes"));
+app.use("/api/auth", authLimiter, require("./routes/authRoutes"));
 app.use("/api/password", require("./routes/passwordRoutes"));
 
 // Health check
 app.get("/", (req, res) => res.json({ status: "API running" }));
+
+// 404 handler
+app.use((req, res) => res.status(404).json({ message: "Route not found" }));
+
+// Global error handler — never leak stack traces to client
+app.use((err, req, res, next) => {
+  console.error(err);
+  res.status(500).json({ message: "Internal server error" });
+});
 
 // Connect DB & start server
 mongoose

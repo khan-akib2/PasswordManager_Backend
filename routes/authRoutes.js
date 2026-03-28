@@ -11,6 +11,13 @@ router.post("/signup", async (req, res) => {
     if (!firstName || !lastName || !email || !password)
       return res.status(400).json({ message: "All fields are required" });
 
+    // Basic email format check
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+      return res.status(400).json({ message: "Invalid email address" });
+
+    if (password.length < 6)
+      return res.status(400).json({ message: "Password must be at least 6 characters" });
+
     const existing = await User.findOne({ email });
     if (existing)
       return res.status(400).json({ message: "Email already in use" });
