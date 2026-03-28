@@ -1,4 +1,5 @@
 const router = require("express").Router();
+const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const auth = require("../middleware/auth");
@@ -20,8 +21,8 @@ router.post("/signup", async (req, res) => {
     if (existing)
       return res.status(400).json({ message: "Email already in use" });
 
-    // Store plain text password
-    const user = await User.create({ firstName, lastName, email, password });
+    const hashed = await bcrypt.hash(password, 10);
+    const user = await User.create({ firstName, lastName, email, password: hashed });
 
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
     res.status(201).json({ token });
@@ -41,8 +42,8 @@ router.post("/login", async (req, res) => {
     if (!user)
       return res.status(400).json({ message: "Invalid credentials" });
 
-    // Plain text comparison
-    if (user.password !== password)
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch)
       return res.status(400).json({ message: "Invalid credentials" });
 
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
@@ -75,10 +76,11 @@ router.put("/change-password", auth, async (req, res) => {
     const user = await User.findById(req.userId);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    if (user.password !== currentPassword)
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch)
       return res.status(400).json({ message: "Current password is incorrect" });
 
-    user.password = newPassword;
+    user.password = await bcrypt.hash(newPassword, 10);
     await user.save();
 
     res.json({ message: "Password updated successfully" });
