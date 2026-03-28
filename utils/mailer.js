@@ -4,7 +4,7 @@ const brevo = new BrevoClient({ apiKey: process.env.BREVO_API_KEY });
 
 async function sendOTP(to, otp) {
   await brevo.transactionalEmails.sendTransacEmail({
-    from: { name: "SafeBuddy", email: process.env.BREVO_SENDER_EMAIL },
+    sender: { name: "SafeBuddy", email: process.env.BREVO_SENDER_EMAIL },
     to: [{ email: to }],
     subject: "Your SafeBuddy verification code",
     htmlContent: `
