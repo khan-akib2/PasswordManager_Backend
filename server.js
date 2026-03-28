@@ -13,14 +13,25 @@ app.set("trust proxy", 1);
 // Security headers
 app.use(helmet());
 
-// CORS — never fall back to wildcard
+// CORS — allow all vercel preview URLs + the main client URL
 const allowedOrigin = process.env.CLIENT_URL;
 if (!allowedOrigin) {
   console.warn("WARNING: CLIENT_URL not set. CORS will block all browser requests.");
 }
 
 app.use(cors({
-  origin: allowedOrigin || false,
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, curl, etc.)
+    if (!origin) return callback(null, true);
+    // Allow the main client URL and any vercel preview deployments
+    if (
+      origin === allowedOrigin ||
+      /\.vercel\.app$/.test(origin)
+    ) {
+      return callback(null, true);
+    }
+    callback(new Error("Not allowed by CORS"));
+  },
   methods: ["GET", "POST", "PUT", "DELETE"],
   allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true,
