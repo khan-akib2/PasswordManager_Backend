@@ -7,6 +7,9 @@ require("dotenv").config();
 
 const app = express();
 
+// Trust Render's proxy (required for express-rate-limit behind a reverse proxy)
+app.set("trust proxy", 1);
+
 // Security headers
 app.use(helmet());
 
@@ -15,10 +18,12 @@ const allowedOrigin = process.env.CLIENT_URL;
 if (!allowedOrigin) {
   console.warn("WARNING: CLIENT_URL not set. CORS will block all browser requests.");
 }
+
 app.use(cors({
   origin: allowedOrigin || false,
   methods: ["GET", "POST", "PUT", "DELETE"],
   allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: true,
 }));
 
 // Body size limit — prevent large payload attacks
