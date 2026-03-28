@@ -1,16 +1,10 @@
-const nodemailer = require("nodemailer");
+const { Resend } = require("resend");
 
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.MAIL_USER,
-    pass: process.env.MAIL_PASS,
-  },
-});
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 async function sendOTP(to, otp) {
-  await transporter.sendMail({
-    from: `"SafeBuddy" <${process.env.MAIL_USER}>`,
+  await resend.emails.send({
+    from: "SafeBuddy <onboarding@resend.dev>",
     to,
     subject: "Your SafeBuddy verification code",
     html: `
