@@ -1,13 +1,44 @@
 const router = require("express").Router();
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
+const Password = require("../models/Password");
 const auth = require("../middleware/auth");
+const { sendOTP } = require("../utils/mailer");
 
-// Signup
+// In-memory OTP store: { email -> { otp, expiresAt } }
+const otpStore = new Map();
+
+function generateOTP() {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+// Send OTP to email
+router.post("/send-otp", async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ message: "Email is required" });
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+      return res.status(400).json({ message: "Invalid email address" });
+
+    const existing = await User.findOne({ email });
+    if (existing) return res.status(400).json({ message: "Email already in use" });
+
+    const otp = generateOTP();
+    otpStore.set(email, { otp, expiresAt: Date.now() + 10 * 60 * 1000 });
+
+    await sendOTP(email, otp);
+    res.json({ message: "OTP sent" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to send OTP" });
+  }
+});
+
+// Signup (requires valid OTP)
 router.post("/signup", async (req, res) => {
   try {
-    const { firstName, lastName, email, password } = req.body;
-    if (!firstName || !lastName || !email || !password)
+    const { firstName, lastName, email, password, otp } = req.body;
+    if (!firstName || !lastName || !email || !password || !otp)
       return res.status(400).json({ message: "All fields are required" });
 
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
@@ -16,12 +47,20 @@ router.post("/signup", async (req, res) => {
     if (password.length < 6)
       return res.status(400).json({ message: "Password must be at least 6 characters" });
 
+    // Verify OTP
+    const record = otpStore.get(email);
+    if (!record) return res.status(400).json({ message: "OTP not found. Please request a new one." });
+    if (Date.now() > record.expiresAt) {
+      otpStore.delete(email);
+      return res.status(400).json({ message: "OTP expired. Please request a new one." });
+    }
+    if (record.otp !== otp) return res.status(400).json({ message: "Invalid OTP" });
+    otpStore.delete(email);
+
     const existing = await User.findOne({ email });
-    if (existing)
-      return res.status(400).json({ message: "Email already in use" });
+    if (existing) return res.status(400).json({ message: "Email already in use" });
 
     const user = await User.create({ firstName, lastName, email, password });
-
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
     res.status(201).json({ token });
   } catch (err) {
@@ -37,8 +76,7 @@ router.post("/login", async (req, res) => {
       return res.status(400).json({ message: "Email and password required" });
 
     const user = await User.findOne({ email });
-    if (!user)
-      return res.status(400).json({ message: "Invalid credentials" });
+    if (!user) return res.status(400).json({ message: "Invalid credentials" });
 
     if (user.password !== password)
       return res.status(400).json({ message: "Invalid credentials" });
@@ -78,8 +116,18 @@ router.put("/change-password", auth, async (req, res) => {
 
     user.password = newPassword;
     await user.save();
-
     res.json({ message: "Password updated successfully" });
+  } catch {
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Delete account
+router.delete("/delete-account", auth, async (req, res) => {
+  try {
+    await Password.deleteMany({ userId: req.userId });
+    await User.findByIdAndDelete(req.userId);
+    res.json({ message: "Account deleted" });
   } catch {
     res.status(500).json({ message: "Server error" });
   }
