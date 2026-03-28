@@ -1,13 +1,16 @@
-const { Resend } = require("resend");
+const Brevo = require("@getbrevo/brevo");
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const client = Brevo.ApiClient.instance;
+client.authentications["api-key"].apiKey = process.env.BREVO_API_KEY;
+
+const transactional = new Brevo.TransactionalEmailsApi();
 
 async function sendOTP(to, otp) {
-  await resend.emails.send({
-    from: "SafeBuddy <onboarding@resend.dev>",
-    to,
+  await transactional.sendTransacEmail({
+    sender: { name: "SafeBuddy", email: "noreply@safebuddy.app" },
+    to: [{ email: to }],
     subject: "Your SafeBuddy verification code",
-    html: `
+    htmlContent: `
       <div style="font-family:sans-serif;max-width:400px;margin:auto;padding:32px;background:#0f172a;color:#e2e8f0;border-radius:16px;">
         <h2 style="color:#6366f1;margin-bottom:8px;">SafeBuddy</h2>
         <p style="color:#94a3b8;margin-bottom:24px;">Your verification code is:</p>
