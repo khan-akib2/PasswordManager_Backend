@@ -61,7 +61,7 @@ router.post("/signup", async (req, res) => {
     if (existing) return res.status(400).json({ message: "Email already in use" });
 
     const user = await User.create({ firstName, lastName, email, password });
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "1y" });
     res.status(201).json({ token });
   } catch (err) {
     res.status(500).json({ message: "Server error" });
@@ -81,7 +81,7 @@ router.post("/login", async (req, res) => {
     if (user.password !== password)
       return res.status(400).json({ message: "Invalid credentials" });
 
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "1y" });
     res.json({ token });
   } catch (err) {
     res.status(500).json({ message: "Server error" });
