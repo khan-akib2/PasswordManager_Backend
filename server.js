@@ -4,6 +4,7 @@ const cors = require("cors");
 const rateLimit = require("express-rate-limit");
 const helmet = require("helmet");
 const session = require("express-session");
+const MongoStore = require("connect-mongo");
 require("dotenv").config();
 
 const app = express();
@@ -19,6 +20,7 @@ app.use(session({
   secret: process.env.JWT_SECRET,
   resave: false,
   saveUninitialized: false,
+  store: MongoStore.create({ mongoUrl: process.env.MONGO_URI }),
 }));
 
 // Passport
