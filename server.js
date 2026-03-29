@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 const rateLimit = require("express-rate-limit");
 const helmet = require("helmet");
+const session = require("express-session");
 require("dotenv").config();
 
 const app = express();
@@ -12,6 +13,17 @@ app.set("trust proxy", 1);
 
 // Security headers
 app.use(helmet());
+
+// Session (required for passport)
+app.use(session({
+  secret: process.env.JWT_SECRET,
+  resave: false,
+  saveUninitialized: false,
+}));
+
+// Passport
+const { router: googleAuthRouter, passport } = require("./routes/googleAuthRoutes");
+app.use(passport.initialize());
 
 // CORS — allow all vercel preview URLs + the main client URL
 const allowedOrigin = process.env.CLIENT_URL;
@@ -52,6 +64,7 @@ const authLimiter = rateLimit({
 
 // Routes
 app.use("/api/auth", authLimiter, require("./routes/authRoutes"));
+app.use("/api/auth", googleAuthRouter);
 app.use("/api/password", require("./routes/passwordRoutes"));
 
 // Health check
