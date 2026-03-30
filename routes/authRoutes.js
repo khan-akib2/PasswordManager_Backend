@@ -1,5 +1,6 @@
 const router = require("express").Router();
 const jwt = require("jsonwebtoken");
+const bcrypt = require("bcryptjs");
 const User = require("../models/User");
 const Password = require("../models/Password");
 const auth = require("../middleware/auth");
@@ -78,8 +79,8 @@ router.post("/login", async (req, res) => {
     const user = await User.findOne({ email });
     if (!user) return res.status(400).json({ message: "Invalid credentials" });
 
-    if (user.password !== password)
-      return res.status(400).json({ message: "Invalid credentials" });
+    const match = await bcrypt.compare(password, user.password);
+    if (!match) return res.status(400).json({ message: "Invalid credentials" });
 
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "1y" });
     res.json({ token });
@@ -117,7 +118,8 @@ router.put("/change-password", auth, async (req, res) => {
     if (!isGoogleUser) {
       if (!currentPassword)
         return res.status(400).json({ message: "Current password is required" });
-      if (user.password !== currentPassword)
+      const match = await bcrypt.compare(currentPassword, user.password);
+      if (!match)
         return res.status(400).json({ message: "Current password is incorrect" });
     }
 
