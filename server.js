@@ -66,8 +66,8 @@ const authLimiter = rateLimit({
 });
 
 // Routes
-app.use("/api/auth", authLimiter, require("./routes/authRoutes"));
 app.use("/api/auth", googleAuthRouter);
+app.use("/api/auth", authLimiter, require("./routes/authRoutes"));
 app.use("/api/password", require("./routes/passwordRoutes"));
 
 // Health check
