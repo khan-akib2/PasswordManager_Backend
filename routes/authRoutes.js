@@ -92,10 +92,10 @@ router.post("/login", async (req, res) => {
 // Get current user profile
 router.get("/me", auth, async (req, res) => {
   try {
-    const user = await User.findById(req.userId).select("-password");
+    const user = await User.findById(req.userId);
     if (!user) return res.status(404).json({ message: "User not found" });
-    const fullUser = await User.findById(req.userId);
-    res.json({ ...user.toObject(), isGoogleUser: fullUser.password.startsWith("google_") });
+    const { password, ...rest } = user.toObject();
+    res.json({ ...rest, isGoogleUser: password.startsWith("google_") });
   } catch {
     res.status(500).json({ message: "Server error" });
   }

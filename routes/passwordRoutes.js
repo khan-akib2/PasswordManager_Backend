@@ -4,7 +4,9 @@ const Password = require("../models/Password");
 const auth = require("../middleware/auth");
 const { encrypt, decrypt } = require("../utils/crypto");
 
-// All routes protected
+function safeDecrypt(text) {
+  try { return decrypt(text); } catch { return text; }
+}
 router.use(auth);
 
 function isValidId(id) {
@@ -19,7 +21,7 @@ router.get("/", async (req, res) => {
       _id: item._id,
       site: item.site,
       username: item.username,
-      password: decrypt(item.password),
+      password: safeDecrypt(item.password),
       createdAt: item.createdAt,
       updatedAt: item.updatedAt,
     })));
@@ -38,7 +40,7 @@ router.post("/add", async (req, res) => {
     const data = await Password.create({ userId: req.userId, site, username, password: encrypt(password) });
     res.status(201).json({
       _id: data._id, site: data.site, username: data.username,
-      password: decrypt(data.password), createdAt: data.createdAt, updatedAt: data.updatedAt,
+      password: safeDecrypt(data.password), createdAt: data.createdAt, updatedAt: data.updatedAt,
     });
   } catch (err) {
     res.status(500).json({ message: "Server error" });
@@ -62,7 +64,7 @@ router.put("/:id", async (req, res) => {
     if (!updated) return res.status(404).json({ message: "Not found" });
     res.json({
       _id: updated._id, site: updated.site, username: updated.username,
-      password: decrypt(updated.password), createdAt: updated.createdAt, updatedAt: updated.updatedAt,
+      password: safeDecrypt(updated.password), createdAt: updated.createdAt, updatedAt: updated.updatedAt,
     });
   } catch (err) {
     res.status(500).json({ message: "Server error" });
