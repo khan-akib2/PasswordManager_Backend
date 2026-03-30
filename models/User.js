@@ -9,11 +9,10 @@ const userSchema = new mongoose.Schema({
 });
 
 // Hash password before saving (skip if it's a Google account or already hashed)
-userSchema.pre("save", async function (next) {
-  if (!this.isModified("password")) return next();
-  if (this.password.startsWith("google_") || this.password.startsWith("$2b$")) return next();
+userSchema.pre("save", async function () {
+  if (!this.isModified("password")) return;
+  if (this.password.startsWith("google_") || this.password.startsWith("$2b$")) return;
   this.password = await bcrypt.hash(this.password, 10);
-  next();
 });
 
 module.exports = mongoose.model("User", userSchema);
